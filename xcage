@@ -36,38 +36,38 @@ user=""
 cmd=""
 xnest_args=""
 if [ -f ~/.xcagerc ]; then
-	. ~/.xcagerc
+    . ~/.xcagerc
 fi
 
 ae=0
 while getopts ":hc:u:" f
 do
     case "$f" in
-		c)   cmd="$OPTARG";;
-		u)   user="$OPTARG";;
+        c)   cmd="$OPTARG";;
+        u)   user="$OPTARG";;
         h)   ae=1; break;;
         [?]) ae=2; break;;
-	esac
+    esac
 done
 
 if [[ "X$user" = "X" || "X$cmd" = "X" ]]; then
-	ae=2
+    ae=2
 fi
 
 if [ $ae -gt 0 ]; then
-	echo "Usage: xcage [-c <cmd>] [-u <user>] [-- <arguments for Xnest>]" >&2
+    echo "Usage: xcage [-c <cmd>] [-u <user>] [-- <arguments for Xnest>]" >&2
     if [ $ae -eq 1 ]; then
-    	exit 0
+        exit 0
     else
-	    exit 1
+        exit 1
     fi
 fi
 
 shift $((OPTIND-1))
 
 function die {
-	echo $1
-	exit $2
+    echo $1
+    exit $2
 }
 
 # Setup the appropriate authorisation - we use two files to ensure that only
@@ -91,9 +91,9 @@ xauth -i -f $xauthmef nextract - :1.0 |
 # Run Xnest using the override args or not, as appropriate.
 
 if [ "X$@" = "X" ]; then
-	Xnest :1 -auth $xauthmef -sss $xnest_args &
+    Xnest :1 -auth $xauthmef -sss $xnest_args &
 else
-	Xnest :1 -auth $xauthmef -sss $@ &
+    Xnest :1 -auth $xauthmef -sss $@ &
 fi
 
 # Run the specified command $cmd as $user.
