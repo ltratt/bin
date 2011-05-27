@@ -90,10 +90,10 @@ xauth -i -f $xauthmef nextract - :1.0 |
 
 # Run Xnest using the override args or not, as appropriate.
 
-if [ "X$@" = "X" ]; then
+if [ $# -eq 0 ]; then
     Xnest :1 -auth $xauthmef -sss $xnest_args &
 else
-    Xnest :1 -auth $xauthmef -sss $@ &
+    Xnest :1 -auth $xauthmef -sss $* &
 fi
 
 # Run the specified command $cmd as $user.
