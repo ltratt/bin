@@ -21,6 +21,8 @@
 # DEALINGS IN THE SOFTWARE.
 
 
+# http://tratt.net/laurie/src/xcage/
+#
 # This utility runs an Xnest (i.e. X Windows-inside-X Windows), and inside
 # that executes a command as another user. This allows one to conveniently
 # run an X Windows "jail" or "sandbox" where programs can execute without

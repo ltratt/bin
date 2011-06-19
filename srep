@@ -21,6 +21,8 @@
 # DEALINGS IN THE SOFTWARE.
 
 
+# http://tratt.net/laurie/src/srep/
+#
 # This utility does a "search and replace" over a group of files, replacing
 # one piece of text T with another T'. Replacements can be done in situ (i.e.
 # updating the files) or by producing a patch (which can then be edited and /
