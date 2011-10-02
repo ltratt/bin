@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+
+# Copyright (C)2008-2011 Laurence Tratt <http://tratt.net/laurie/>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+
+# This utility runs a command a user-specified number of times, and prints
+# the timing averages and medians having done so. It is a low-tech way of
+# timing things while still providing some assurance that occasional usage
+# spikes by other processes / users are not unduly distorting results.
+
+
+import subprocess, sys
+
+def usage():
+    sys.stderr.write("multitime <num_runs> <command> [<command args>]\n")
+    sys.exit(1)
+
+if len(sys.argv) < 3:
+    usage()
+
+try:
+    num_runs = int(sys.argv[1])
+except ValueError:
+    usage()
+
+cmd = ["/usr/bin/time", "-p"] + sys.argv[2:]
+
+all_reals = []
+all_users = []
+all_syss = []
+
+for i in range(1, num_runs + 1):
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
+      stderr=subprocess.PIPE, universal_newlines=True)
+    out = process.communicate()[1]
+
+    if process.returncode != 0:
+        sys.stderr.write( \
+          "%s exited with a non-zero return code on run #%d. Exiting." % \
+          (sys.argv[2], str(i)))
+        sys.exit(process.returncode)
+    else:
+        # time's formatted output is fixed by POSIX -p option, so this is safe.
+        times = out.split('\n')
+        all_reals.append(float(times[0][5:]))
+        all_users.append(float(times[1][5:]))
+        all_syss.append(float(times[2][4:]))
+
+av_real = 0
+av_user = 0
+av_sys = 0
+for i in range(num_runs):
+	av_real += all_reals[i]
+	av_user += all_users[i]
+	av_sys += all_syss[i]
+
+all_reals.sort()
+all_users.sort()
+all_syss.sort()
+
+print("Averages: real %.3f user %.3f sys %.3f" % (av_real / num_runs, av_user / num_runs, av_sys / num_runs))
+print("Medians : real %.2f user %.2f sys %.2f" % (all_reals[int(num_runs / 2)], all_users[int(num_runs / 2)], all_syss[int(num_runs / 2)]))
