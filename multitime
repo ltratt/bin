@@ -55,7 +55,7 @@ for i in range(1, num_runs + 1):
     if process.returncode != 0:
         sys.stderr.write( \
           "%s exited with a non-zero return code on run #%d. Exiting." % \
-          (sys.argv[2], i))
+          (sys.argv[2], str(i)))
         sys.exit(process.returncode)
     else:
         # time's formatted output is fixed by POSIX -p option, so this is safe.
