@@ -22,12 +22,14 @@
 
 
 # This utility runs a command a user-specified number of times, and prints
-# the timing averages and medians having done so. It is a low-tech way of
-# timing things while still providing some assurance that occasional usage
-# spikes by other processes / users are not unduly distorting results.
+# the timing means (averages), medians, and standard deviations having done
+# so. It is a low-tech way of timing things while still providing some
+# assurance that a) occasional usage spikes by other processes / users are
+# not unduly distorting results b) if such spikes are frequent, distortions
+# in the data can be spotted.
 
 
-import subprocess, sys
+import math, subprocess, sys
 
 def usage():
     sys.stderr.write("multitime <num_runs> <command> [<command args>]\n")
@@ -64,17 +66,32 @@ for i in range(1, num_runs + 1):
         all_users.append(float(times[1][5:]))
         all_syss.append(float(times[2][4:]))
 
-av_real = 0
-av_user = 0
-av_sys = 0
+mn_realc = 0
+mn_userc = 0
+mn_sysc = 0
 for i in range(num_runs):
-	av_real += all_reals[i]
-	av_user += all_users[i]
-	av_sys += all_syss[i]
+	mn_realc += all_reals[i]
+	mn_userc += all_users[i]
+	mn_sysc += all_syss[i]
+mn_real = mn_realc / num_runs
+mn_user = mn_userc / num_runs
+mn_sys = mn_sysc / num_runs
+
+sd_realc = 0
+sd_userc = 0
+sd_sysc = 0
+for i in range(num_runs):
+    sd_realc += math.pow(all_reals[i] - mn_real, 2)
+    sd_userc += math.pow(all_users[i] - mn_user, 2)
+    sd_sysc += math.pow(all_syss[i] - mn_sys, 2)
+sd_real = math.sqrt(sd_realc / num_runs)
+sd_user = math.sqrt(sd_userc / num_runs)
+sd_sys = math.sqrt(sd_sysc / num_runs)
 
 all_reals.sort()
 all_users.sort()
 all_syss.sort()
 
-print("Averages: real %.3f user %.3f sys %.3f" % (av_real / num_runs, av_user / num_runs, av_sys / num_runs))
-print("Medians : real %.2f user %.2f sys %.2f" % (all_reals[int(num_runs / 2)], all_users[int(num_runs / 2)], all_syss[int(num_runs / 2)]))
+print("Means:     real %.3f user %.3f sys %.3f" % (mn_real, mn_user, mn_sys))
+print("Std. devs: real %.3f user %.3f sys %.3f" % (sd_real, sd_user, sd_sys))
+print("Medians:   real %.2f user %.2f sys %.2f" % (all_reals[int(num_runs / 2)], all_users[int(num_runs / 2)], all_syss[int(num_runs / 2)]))
