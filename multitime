@@ -95,6 +95,18 @@ all_reals.sort()
 all_users.sort()
 all_syss.sort()
 
+if num_runs % 2 == 0:
+    i = num_runs // 2 - 1
+    j = num_runs // 2
+    md_real = (all_reals[i] + all_reals[j]) / 2
+    md_user = (all_users[i] + all_users[j]) / 2
+    md_sys = (all_syss[i] + all_syss[j]) / 2
+else:
+    i = num_runs // 2
+    md_real = all_reals[i]
+    md_user = all_users[i]
+    md_sys = all_syss[i]
+
 print("Means:     real %.3f user %.3f sys %.3f" % (mn_real, mn_user, mn_sys))
 print("Std. devs: real %.3f user %.3f sys %.3f" % (sd_real, sd_user, sd_sys))
-print("Medians:   real %.2f user %.2f sys %.2f" % (all_reals[int(num_runs / 2)], all_users[int(num_runs / 2)], all_syss[int(num_runs / 2)]))
+print("Medians:   real %.3f user %.3f sys %.3f" % (md_real, md_user, md_sys))
