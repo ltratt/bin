@@ -43,6 +43,9 @@ try:
 except ValueError:
     usage()
 
+if num_runs <= 0:
+    usage()
+
 cmd = ["/usr/bin/time", "-p"] + sys.argv[2:]
 
 all_reals = []
