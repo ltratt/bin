@@ -150,10 +150,10 @@ class _SREP:
 				line += " " * (15 - len(line))
 				line += file_mdate
 				print line
-				ndiff = ''.join(difflib.ndiff(original_file_data.splitlines(1), file_data.splitlines(1)))
+				ndiff = "\n".join(difflib.ndiff(original_file_data.splitlines(), file_data.splitlines()))
 				print self.ndiff_to_unified_diff(ndiff)
 			elif self._produce_patch == _PATCH_UNIFIED:
-				print ''.join(difflib.unified_diff(original_file_data.splitlines(1), file_data.splitlines(1), file_name, file_name, file_mdate, file_mdate))
+				print "\n".join(difflib.unified_diff(original_file_data.splitlines(), file_data.splitlines(), file_name, file_name, file_mdate, file_mdate, lineterm=""))
 			else:
 				file = open(file_name, "w")
 				file.write(file_data)
