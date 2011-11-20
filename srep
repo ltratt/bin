@@ -45,20 +45,20 @@ class _SREP:
 
 	def __init__(self):
 
-		opts, args = getopt.getopt(sys.argv[1 : ], "rivnuht:")
+		opts, args = getopt.getopt(sys.argv[1 : ], "rvmnuht:")
 	
 		self._recurse = 0
 		self._interactive = 0
 		self._verbose = 0
-		self._produce_patch = _PATCH_NONE
+		self._produce_patch = _PATCH_UNIFIED
 		num_replaces = 1
 		for opt in opts:
 			if opt[0] == "-r":
 				self._recurse = 1
-			elif opt[0] == "-i":
-				self._interactive = 1
 			elif opt[0] == "-v":
 				self._verbose = 1
+			elif opt[0] == "-m":
+				self._produce_patch = _PATCH_NONE
 			elif opt[0] == "-n":
 				self._produce_patch = _PATCH_NDIFF
 			elif opt[0] == "-u":
