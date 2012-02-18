@@ -107,6 +107,8 @@ else:
     md_user = all_users[i]
     md_sys = all_syss[i]
 
+print("Mins:      real %.3f user %.3f sys %.3f" % (all_reals[0], all_users[0], all_syss[0]))
+print("Maxs:      real %.3f user %.3f sys %.3f" % (all_reals[-1], all_users[-1], all_syss[-1]))
 print("Means:     real %.3f user %.3f sys %.3f" % (mn_real, mn_user, mn_sys))
 print("Std. devs: real %.3f user %.3f sys %.3f" % (sd_real, sd_user, sd_sys))
 print("Medians:   real %.3f user %.3f sys %.3f" % (md_real, md_user, md_sys))
