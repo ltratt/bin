@@ -24,9 +24,10 @@
 # http://tratt.net/laurie/src/srep/
 #
 # This utility does a "search and replace" over a group of files, replacing
-# one piece of text T with another T'. Replacements can be done in situ (i.e.
-# updating the files) or by producing a patch (which can then be edited and /
-# or applied to update the files).
+# one piece of text T with another T'. Output is either: a unified diff sent
+# to stdout (i.e. without modifying files) with "-u"; or the direct
+# modification of the files with "-m". If no flag is specified, "-u" is
+# assumed, since it is non-destructive.
 
 
 import difflib, getopt, os, re, stat, sys, time
