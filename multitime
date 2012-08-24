@@ -37,7 +37,9 @@ import getopt, math, subprocess, sys
 
 
 
-def usage():
+def usage(msg=None):
+    if msg:
+        sys.stderr.write(msg + "\n")
     sys.stderr.write("multitime [-s] <num_runs> <command> [<command args>]\n")
     sys.exit(1)
 
@@ -48,10 +50,10 @@ for opt in opts:
 	if opt[0] == "-s":
 		read_stdin = True
 	else:
-		self.usage("Error: Unknown arg '%s'" % opt[0])
+		usage("Error: Unknown arg '%s'" % opt[0])
 
 if len(args) < 2:
-	self.usage("Insufficient number of args")
+	usage("Insufficient number of args")
 
 try:
     num_runs = int(args[0])
