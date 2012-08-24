@@ -76,9 +76,9 @@ for i in range(1, num_runs + 1):
     process = subprocess.Popen(cmd, stdin=subprocess.PIPE, \
       stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     if stdin_data is None:
-        out, stderr = process.communicate()
+        _, stderr = process.communicate()
     else:
-        out, stderr = process.communicate(stdin_data)
+        _, stderr = process.communicate(stdin_data)
 
     if process.returncode != 0:
         sys.stderr.write(stderr)
@@ -88,7 +88,7 @@ for i in range(1, num_runs + 1):
         sys.exit(process.returncode)
     else:
         # time's formatted output is fixed by POSIX -p option, so this is safe.
-        times = out.split('\n')
+        times = stderr.split('\n')
         all_reals.append(float(times[0][5:]))
         all_users.append(float(times[1][5:]))
         all_syss.append(float(times[2][4:]))
