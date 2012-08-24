@@ -76,14 +76,15 @@ for i in range(1, num_runs + 1):
     process = subprocess.Popen(cmd, stdin=subprocess.PIPE, \
       stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     if stdin_data is None:
-        out = process.communicate()[1]
+        out, stderr = process.communicate()
     else:
-        out = process.communicate(stdin_data)[1]
+        out, stderr = process.communicate(stdin_data)
 
     if process.returncode != 0:
+        sys.stderr.write(stderr)
         sys.stderr.write( \
           "%s exited with a non-zero return code on run #%d. Exiting." % \
-          (sys.argv[2], i))
+          (args[1], i))
         sys.exit(process.returncode)
     else:
         # time's formatted output is fixed by POSIX -p option, so this is safe.
