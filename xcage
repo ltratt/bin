@@ -75,7 +75,13 @@ function die {
 # Setup the appropriate authorisation - we use two files to ensure that only
 # the current user and $user can access the X authorisation files.
 
-hexkey=`jot -p 64 -s "" -r -w "%.2x" 16 0 255`
+which jot > /dev/null 2> /dev/null
+if [ $? -eq 0 ]; then
+    hexkey=`jot -p 64 -s "" -r -w "%.2x" 16 0 255`
+else
+    hexkey=`head -c 16 < /dev/urandom | hexdump -v -e '/1 "%02x"'` ||
+      die "Can't create hex key" $?
+fi
 umask 022
 xauthmef=`mktemp` ||
   die "Can't create temporary file" $?
