@@ -1,0 +1,242 @@
+#! /bin/sh
+
+# Copyright (c) 2003-2014 Laurence Tratt <http://tratt.net/laurie/>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+PROGNAME="packagesbootstrap"
+VERSION="0.03 (2014-02-18) Copyright (C)Laurence Tratt 2003-2014"
+
+#
+# Set up the defaults
+#
+
+default_ftpserver="ftp://ftp.openbsd.org/pub/OpenBSD/"
+
+# Determine whether we're running -current or -stable
+
+dmesg | head -1 | egrep "OpenBSD [0-9]+\.[0-9]+-" > /dev/null
+if [ $? -eq 0 ]; then
+	# -current
+	default_osversion="snapshot"
+else
+	# -stable
+	default_osversion=`uname -r`
+fi
+
+# Default architecture
+
+default_arch=`arch -s`
+
+# Default dir to download packages to
+
+if [ -d /usr/ports/packages/$default_arch/all ]; then
+	default_output=/usr/ports/packages/$default_arch/all
+else
+	default_output="."
+fi
+
+# Whether to prompt users when multiple matches are found for a given package
+
+default_prompt=1
+
+
+
+#
+# Process the program input
+#
+
+argserror=0
+
+ftpserver=$default_ftpserver
+osversion=$default_osversion
+arch=$default_arch
+output=$default_output
+prompt=$default_prompt
+
+set -- `getopt f:o:a:d:lh $*`
+if [ $? -ne 0 ]; then
+	argserror=1
+else
+	for i; do
+		case "$i" in
+			-f)
+				ftpserver=$2; shift; shift;;
+			-h)
+				argserror=1; shift; break;;
+			-p)
+				prompt=$2; shift; shift;;
+			-o)
+				osversion=$2; shift; shift;;
+			-a)
+				arch=$2; shift; shift;;
+			-l)
+				prompt=0; shift;;
+			-d)
+				output=$2; shift; shift;;
+			--)
+				shift; break;;
+		esac
+	done
+fi
+
+if [ $argserror -eq 0 ]; then
+	if [ $# -gt 1 ]; then
+		argserror=1
+	else
+		packagestmp=`mktemp`
+		if [ $# -eq 0 ]; then
+			pkg_info | cut -d " " -f 1 > $packagestmp
+		else
+			cat $1 | cut -d " " -f 1 > $packagestmp
+		fi
+	fi
+fi
+
+if [ $argserror -ne 0 ]; then
+	os_release=`uname -r`
+	cat << EOF > /dev/stderr
+Usage: $PROGNAME [<options>] [<packages list>]
+
+<packages list> is either a list of package names, separated by newlines,
+or the output from the pkg_info command. If <packages list> is not specified,
+the list of packages installed on this machine will be used.
+
+Options:
+    -f <ftp server>    Default: '$default_ftpserver'
+                       FTP server to download binary packages from.
+    -o <version>       Default: '$default_osversion'
+                       OS version number. e.g. '$os_release' or 'snapshot'
+    -a <arch>          Default: '$default_arch'
+                       Architecture to download packages for. e.g. 'i386'
+                         or 'sparc'
+    -d <dir>           Default: '$default_output'
+                       Directory to save packages to.
+    -l                 Default: Off
+                       Do not prompt if multiple matches found.
+EOF
+	exit 1
+fi
+
+if [ ! -d $output ]; then
+    echo "${output} not found or not a directory" > /dev/stderr
+    exit 1
+fi
+
+#
+# Download packages
+#
+
+function unique_package_name {
+	if [ "$2" = "" ]; then
+		echo $1
+		return
+	fi
+	echo "$1 $2" | sed "s/ /__unique__/"
+}
+
+
+
+if [ $osversion = "snapshot" ]; then
+	ftp_dir=snapshots/packages/$arch
+else
+	ftp_dir=$osversion/packages/$arch
+fi
+
+ftplisttmp=`mktemp`
+ftptmp=`mktemp`
+echo "cd $ftp_dir\nls" | ftp -a -V $ftpserver/ > $ftplisttmp
+
+if [ $? -ne 0 ]; then
+	echo "Error retrieving directory listing from $ftpserver.\n\nCheck the server name and path and try again." > /dev/stderr
+	exit 1
+fi
+
+cat $ftplisttmp | egrep "^[drwx-]+" | awk 'gsub(" +", " ")' | cut -d " " -f 9 > $ftptmp
+rm -f $ftplisttmp
+
+to_download=""
+matched=""
+nomatches=""
+for complete_package_name in `cat $packagestmp`; do
+	package_name_tmp=`echo $complete_package_name | sed "s/-[0-9][^-]*/ /"`
+	package_name=`echo $package_name_tmp | cut -d " " -f 1`
+	package_name_re=`echo $package_name | sed "s/[+]/[+]/g"`
+	package_flavour=`echo "$package_name_tmp " | cut -d " " -f 2`
+	echo $matched | egrep "[[:<:]]$package_name[[:>:]]" > /dev/null
+	if [ $? -ne 0 ]; then
+		matched="$matched $package_name"
+		matches=""
+		for match in `egrep "^$package_name_re-[0-9]" $ftptmp`; do
+			if [ "$package_flavour" != "" ]; then
+				echo $match | grep -e "$package_flavour.tgz\$" > /dev/null
+				if [ $? -eq 0 ]; then
+					matches="$matches $match"
+				fi
+			else
+				potential_match_tmp=`echo $match | sed "s/.tgz$//" | sed "s/-[0-9][^-]*/ /"`
+				potential_match_flavor=`echo "$potential_match_tmp " | cut -d " " -f 2`
+				if [ "$potential_match_flavor" = "" ]; then
+					matches="$matches $match"
+				fi
+			fi
+		done
+		if [ `echo $matches | wc -w` -eq 0 ]; then
+			echo "Found no matches for $complete_package_name."
+			nomatches="$nomatches $complete_package_name"
+		elif [ `echo $matches | wc -w` -eq 1 ]; then
+			echo "Match for $complete_package_name:$matches."
+			todownload="$todownload $matches"
+		else
+			echo "Multiple matches found for $complete_package_name."
+			echo -n " "
+			for match in `echo $matches`; do
+				echo -n " $match"
+			done
+			echo
+			for match in `echo $matches`; do
+				if [ $prompt -eq 0 ]; then
+					todownload="$todownload $match"
+				else
+					echo -n "  $match... "
+					echo -n "download? [Y/n] "
+					read answer
+					if [ "$answer" != "n" ]; then
+						todownload="$todownload $match"
+					fi
+				fi
+			done
+		fi
+	fi
+done
+
+for package in `echo $todownload`; do
+	echo
+	echo "ftp $ftpserver/$ftp_dir/$package"
+	ftp -V -o $output/$package $ftpserver/$ftp_dir/$package
+done
+
+if [ "$nomatches" != "" ]; then
+	echo "\nWarning: no matches were found for the following packages:"
+	for complete_package_name in `echo $nomatches`; do
+		echo "  $complete_package_name"
+	done
+fi
+
+rm -f $packagestmp $ftptmp $ftplisttmp
