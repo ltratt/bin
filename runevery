@@ -1,0 +1,99 @@
+#! /bin/sh
+
+# Copyright (C)2014 Laurence Tratt <http://tratt.net/laurie/>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# runevery [-d <count dir>] <count1> <cmd1> <count2> <cmd2>
+# This utility runs one of cmd1 or cmd2 every time it is called. A count is kept
+# in a temporary file so that runevery knows when to switch between cmd1 and
+# cmd2. cmd1 is first run count1 times, then cmd2 is run count2 times (i.e.
+# count1 calls to runevery call cmd1; then count2 calls to runevery call cmd2);
+# the counter is then reset and the process begins anew.
+
+
+# A list of possible hash commands. There is no consistency across Unices as to
+# what these are called, nor their command line parameters. In practise, we seem
+# to be able to get away with piping a string in via stdin and truncating the
+# hash to something of half-reasonable length.
+
+HASH_CMDS="sha256 sha256sum md5 md5sum"
+
+
+usage() {
+    echo "Usage: runevery [-d <count dir>] <count1> <cmd1> <count2> <cmd2>" >&2
+    exit 1
+}
+
+
+countdir="/var/tmp/"
+while getopts ":hd:" f
+do
+    case "$f" in
+        d)   countdir="$OPTARG";;
+        h)   usage;;
+        [?]) usage;;
+    esac
+done
+
+shift $((OPTIND-1))
+if [ $# -ne 4 ]; then
+    usage
+fi
+count1=`expr $1`
+cmd1=$2
+count2=`expr $3`
+cmd2=$4
+
+
+# See if we can find a usable hash command
+
+hash_cmd=""
+for cnd_hash_cmd in $HASH_CMDS; do
+    which $cnd_hash_cmd >/dev/null 2> /dev/null
+    if [ $? -eq 0 ]; then
+        hash_cmd=$cnd_hash_cmd
+        break
+    fi
+done
+if [ "$hash_cmd" = "" ]; then
+    echo "No usable hash command found. Install sha256 / md5." >&2
+    exit 1
+fi
+
+
+# See where we're up to with the count
+
+countp=/var/tmp/runevery.`echo "$cmd1$cmd2" | $hash_cmd | cut -c 1-16`
+if [ ! -f $countp ]; then
+    cur=0
+else
+    cur=$((`head -n 1 $countp` + 1))
+fi
+if [ $cur -ge $(($count1+$count2)) ]; then
+    cur=0
+fi
+
+if [ $cur -ge $count1 ]; then
+    $cmd2
+else
+    $cmd1
+fi
+echo $cur > $countp
+
