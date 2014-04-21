@@ -20,12 +20,12 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-# runevery [-d <count dir>] <count1> <cmd1> <count2> <cmd2>
-# This utility runs one of cmd1 or cmd2 every time it is called. A count is kept
-# in a temporary file so that runevery knows when to switch between cmd1 and
-# cmd2. cmd1 is first run count1 times, then cmd2 is run count2 times (i.e.
-# count1 calls to runevery call cmd1; then count2 calls to runevery call cmd2);
-# the counter is then reset and the process begins anew.
+# runevery [-d <count dir>] <count1> <cmd1> [... <countn> <cmdn>]
+# Every time this utility is called it executes one of cmd1 ... cmdn. It
+# selects the command by remembering how many times this particular sequence
+# of commands has been called. First, cmd1 is executed countn times; cmd2 (if it
+# exists) count2 times; and cmdn countn times. It then cycles back to the
+# beginning.
 
 
 # A list of possible hash commands. There is no consistency across Unices as to
@@ -34,32 +34,6 @@
 # hash to something of half-reasonable length.
 
 HASH_CMDS="sha256 sha256sum md5 md5sum"
-
-
-usage() {
-    echo "Usage: runevery [-d <count dir>] <count1> <cmd1> <count2> <cmd2>" >&2
-    exit 1
-}
-
-
-countdir="/var/tmp/"
-while getopts ":hd:" f
-do
-    case "$f" in
-        d)   countdir="$OPTARG";;
-        h)   usage;;
-        [?]) usage;;
-    esac
-done
-
-shift $((OPTIND-1))
-if [ $# -ne 4 ]; then
-    usage
-fi
-count1=`expr $1`
-cmd1=$2
-count2=`expr $3`
-cmd2=$4
 
 
 # See if we can find a usable hash command
@@ -78,22 +52,77 @@ if [ "$hash_cmd" = "" ]; then
 fi
 
 
-# See where we're up to with the count
+usage() {
+    echo "Usage: runevery [-d <count dir>] <count1> <cmd1> [... <countn> <cmdn>]" >&2
+    exit 1
+}
 
-countp=/var/tmp/runevery.`echo "$cmd1$cmd2" | $hash_cmd | cut -c 1-16`
+countdir="/var/tmp/"
+while getopts ":hd:" f
+do
+    case "$f" in
+        d)   countdir="$OPTARG";;
+        h)   usage;;
+        [?]) usage;;
+    esac
+done
+
+# Since commands come in (count, cmd) pairs, they must be an even number
+shift $((OPTIND-1))
+if [ $(($# % 2)) -ne 0 ]; then
+    usage
+fi
+
+numcmds=$(($# / 2))
+counttotal=0
+cmdi=0
+while [ $# -gt 0 ]; do 
+    counts[cmdi]=`expr $1`
+    if [ $? -gt 1 ]; then
+        usage
+    fi
+	cmds[cmdi]=$2
+    counttotal=$((counttotal + ${counts[cmdi]}))
+    cmdi=$((cmdi + 1))
+	shift
+    shift
+done
+
+
+# Work out where the count file is (or should be)
+
+concat=""
+i=0
+while [ i -lt $numcmds ]; do
+    concat="$concat${counts[i]}${cmds[i]}"
+    i=$((i + 1))
+done
+countp=/var/tmp/runevery.`echo $concat | $hash_cmd | cut -c 1-16`
 if [ ! -f $countp ]; then
     cur=0
 else
     cur=$((`head -n 1 $countp` + 1))
 fi
-if [ $cur -ge $(($count1+$count2)) ]; then
+
+if [ $cur -ge $counttotal ]; then
+    # We've wrapped
     cur=0
 fi
 
-if [ $cur -ge $count1 ]; then
-    $cmd2
-else
-    $cmd1
-fi
+
+# Execute the appropriate command
+
+i=0
+count=0
+while [ i -lt $numcmds ]; do
+    nextcount=$((count + ${counts[i]}))
+    if [ $cur -lt $nextcount ]; then
+        ${cmds[i]}
+        break
+    fi
+    count=$nextcount
+    i=$((i + 1))
+done
+
 echo $cur > $countp
 
