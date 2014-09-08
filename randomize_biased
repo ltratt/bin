@@ -1,0 +1,20 @@
+#! /usr/bin/env python2.7
+
+import random, sys
+
+d = sys.stdin.readlines() # lines of data
+bias = []
+for i in range(len(d)):
+    bias.extend([i] * (len(d) - i))
+
+random.shuffle(bias)
+seen = set()
+
+for i in bias:
+    if i in seen:
+        continue
+    seen.add(i)
+    try:
+        sys.stdout.write(d[i])
+    except IOError:
+        break
