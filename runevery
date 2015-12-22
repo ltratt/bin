@@ -114,10 +114,12 @@ fi
 
 i=0
 count=0
+ec=0
 while [ i -lt $numcmds ]; do
     nextcount=$((count + ${counts[i]}))
     if [ $cur -lt $nextcount ]; then
         ${cmds[i]}
+        ec=$?
         break
     fi
     count=$nextcount
@@ -125,4 +127,4 @@ while [ i -lt $numcmds ]; do
 done
 
 echo $cur > $countp
-
+exit $ec
