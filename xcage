@@ -34,6 +34,17 @@
 #   http://shoestringfoundation.org/cgi-bin/blosxom.cgi/2005/11/16
 
 
+which sudo 2> /dev/null > /dev/null
+if [ $? -eq 0 ]; then
+    sudo="sudo"
+else
+    which doas 2> /dev/null > /dev/null
+    if [ $? -eq 0 ]; then
+        sudo="doas"
+    else
+        sudo=""
+    fi
+fi
 user=""
 cmd=""
 xnest_args=""
@@ -48,9 +59,15 @@ do
         c)   cmd="$OPTARG";;
         u)   user="$OPTARG";;
         h)   ae=1; break;;
+        s)   sudo="$OPTARG";;
         [?]) ae=2; break;;
     esac
 done
+
+if [ "$sudo" == "" ]; then
+    echo "No sudo-esque command specified." > /dev/stderr
+    exit 1
+fi
 
 if [[ "X$user" = "X" || "X$cmd" = "X" ]]; then
     ae=2
@@ -77,7 +94,7 @@ function die {
 
 which jot > /dev/null 2> /dev/null
 if [ $? -eq 0 ]; then
-    hexkey=`jot -p 64 -s "" -r -w "%.2x" 16 0 255`
+    hexkey=`jot -p 8 -s "" -r -w "%.2x" 16 0 255`
 else
     hexkey=`head -c 16 < /dev/urandom | hexdump -v -e '/1 "%02x"'` ||
       die "Can't create hex key" $?
@@ -86,14 +103,14 @@ umask 022
 xauthmef=`mktemp` ||
   die "Can't create temporary file" $?
 trap "rm -f $xauthmef" 0 1 2 3 13 15
-xauthof=`sudo su -l $user -c mktemp` ||
+xauthof=`$sudo su -l $user -c mktemp` ||
   die "Can't create temporary file as user $user" $?
-trap "rm -f $xauthmef; sudo -u $user rm -f $xauthof" 0 1 2 3 13 15
-  
+trap "rm -f $xauthmef; $sudo -u $user rm -f $xauthof" 0 1 2 3 13 15
+
 xauth -i -f $xauthmef add :1.0 . $hexkey ||
   exit $?
 xauth -i -f $xauthmef nextract - :1.0 |
-  sudo -u $user xauth -f $xauthof nmerge - ||
+  $sudo -u $user xauth -f $xauthof nmerge - ||
   exit $?
 
 # Run Xnest using the override args or not, as appropriate.
@@ -106,7 +123,7 @@ fi
 
 # Run the specified command $cmd as $user.
 
-sudo su -l $user -c "XAUTHORITY=$xauthof DISPLAY=:1.0 $cmd"
+$sudo su -l $user -c "XAUTHORITY=$xauthof DISPLAY=:1.0 $cmd"
 
 # Sometimes Xnest exits unexpectedly, and there may be other Xnests running
 # in the system, so we're careful only to kill an Xnest process (should
