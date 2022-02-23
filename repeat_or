@@ -1,0 +1,16 @@
+#! /bin/sh
+
+if [ $# -lt 2 ]; then
+    echo "Usage: repeat_or <count> <cmd> [<arg1> ... <argn>]" > /dev/stderr
+    exit 1
+fi
+
+count=$1
+shift
+while [ $count -ne 0 ]; do
+    eval $@
+    if [ $? -ne 0 ]; then
+        exit $?
+    fi
+    count=$(($count - 1))
+done
