@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python3
 
 # Copyright (c)2013 Laurence Tratt <http://tratt.net/laurie>
 #
@@ -39,7 +39,12 @@ CHARS_MAP = {
   "\"" : "",
   ">" : "",
   "," : "_",
-  "?" : "_"
+  "?" : "_",
+  "!" : "",
+  "&" : "and",
+  "´" : "'",
+  ":" : "_",
+  "#" : ""
 }
 
 
@@ -57,7 +62,7 @@ def sanitise(dp):
                 os.renames(lp, rlp)
                 l = rl
                 lp = os.path.join(dp, l)
-        
+
         if os.path.isdir(lp):
             sanitise(lp)
 
